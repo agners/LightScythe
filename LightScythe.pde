@@ -39,7 +39,7 @@ PushButton prevButton = PushButton((uint8_t)PREV_PIN, 50, &prev_pressed);
 PushButton startButton = PushButton((uint8_t)START_PIN, 50, &start_pressed);
 
 // VDIP1 TX is our RX, and visa versa
-VNC1L_BOMS flashDisk = VNC1L_BOMS(9600, VDIP1_TX_PIN, VDIP1_RX_PIN, VDIP1_CTS_PIN, VDIP1_RTS_PIN);
+VNC1L_BOMS flashDisk = VNC1L_BOMS(9600, VDIP1_TX_PIN, VDIP1_RX_PIN);
 char filename[6] = "n.bmp";
 long pic_offset = 0; // Offset to the picture data inside the BMP file
 long pic_width = 0; // Width of the picture (=> This is going to be the height on the RGB LED's)
@@ -68,6 +68,12 @@ void loop(){
   prevButton.check();
   startButton.check();
   
+  check_battery();
+  
+}
+
+void check_battery()
+{
   
 }
 
@@ -151,7 +157,7 @@ void show_picture_row(int column) {
   flashDisk.file_seek(row_offset);
   
   // Read the line
-  flashDisk.file_read(LED_COUNT, led_data);
+  flashDisk.file_read(LED_COUNT * 3, led_data);
   
   // Display it on the LightScythe
   // TODO
