@@ -1,0 +1,7 @@
+LightScythe is basically a two meter long stick to draw pictures into the air while taking a photograph using long time expsoure . The two meter stick has LED's on it which light up to draw the picture column wise.
+
+My implementation is based on The Mechatronics Guy's implementation. Thanks to him for sharing his idea! It extends the functionality with a remote shutter function for Nikon DSLR cameras and two buttons to select a picture. Also the LightScythe picuture is read from a USB stick.
+
+This is the Arduino Firmware building it
+
+Read more: http://falstaff.agner.ch/lightscythe/
