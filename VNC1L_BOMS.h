@@ -27,11 +27,9 @@ class VNC1L_BOMS
     NewSoftSerial _vnc1l;
     byte _pin_rx;
     byte _pin_tx;
-    byte _pin_cts;
-    byte _pin_rts;
     
   public:
-    VNC1L_BOMS(int baud, byte pin_rx, byte pin_tx, byte pin_cts, byte pin_rts);
+    VNC1L_BOMS(int baud, byte pin_rx, byte pin_tx);
     void file_open(const String &file);
     void file_seek(long offset);
     void file_read(int count, byte[]);

@@ -19,10 +19,8 @@
 #include <NewSoftSerial.h>
 #include "VNC1L_BOMS.h"
 
-VNC1L_BOMS::VNC1L_BOMS(int baud, byte pin_rx, byte pin_tx, byte pin_cts, byte pin_rts) {
+VNC1L_BOMS::VNC1L_BOMS(int baud, byte pin_rx, byte pin_tx) {
   _vnc1l = NewSoftSerial(pin_rx, pin_tx);
-  _pin_cts = pin_cts;
-  _pin_rts = pin_rts;
   
   _vnc1l.begin(baud);
 }
