@@ -34,6 +34,8 @@ class VNC1L_BOMS
     void file_seek(long offset);
     void file_read(int count, byte[]);
     void file_close(const String &file);
+    void sync();
+    void waitforprompt(boolean show=false);
 };
 
 #endif

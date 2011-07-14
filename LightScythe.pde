@@ -40,7 +40,7 @@ PushButton startButton = PushButton((uint8_t)START_PIN, 50, &start_pressed);
 
 // VDIP1 TX is our RX, and visa versa
 VNC1L_BOMS flashDisk = VNC1L_BOMS(9600, VDIP1_TX_PIN, VDIP1_RX_PIN);
-char filename[6] = "n.bmp";
+char filename[6] = "n.BMP";
 long pic_offset = 0; // Offset to the picture data inside the BMP file
 long pic_width = 0; // Width of the picture (=> This is going to be the height on the RGB LED's)
 long pic_row_width = 0; // Raw Width
@@ -59,8 +59,23 @@ void setup(){
   prevButton.setup();
   startButton.setup();
   
+  
+  Serial.println("LightScythe starting...");
+  delay(1000);
+  Serial.println("Syncing VDIP1...");
+  flashDisk.sync();
+  
   // Initialize the battery AD
   pinMode(BAT_PIN, INPUT);
+  int bat = analogRead(BAT_PIN);
+  bat = map(bat, 1, 1023, 0, 150);
+  Serial.println("Battery voltage: ");
+  Serial.println(bat / 10.0, 1);
+  
+  
+  delay(3000);
+  Serial.println("Autostart...");
+  start_pressed();
 }
 
 void loop(){
@@ -117,11 +132,12 @@ void start_pressed()
     pic_row_width += 4 - uneven_bytes;
   
   
+  Serial.print("Picture Offset: ");
+  Serial.println(pic_offset);
   Serial.print("Picture Columns: ");
-  Serial.print(pic_height);
-  Serial.print("Rows: ");
-  Serial.print(pic_width);
-  Serial.println();
+  Serial.println(pic_height);
+  Serial.print("Picture Rows: ");
+  Serial.println(pic_width);
   
   // Column's are the BMP's rows...
   int column;
@@ -130,9 +146,10 @@ void start_pressed()
     // Show the current row..
     show_picture_row(column);
     // 20ms delay between each row...
-    delay(20);
+    //delay(20);
   }
   
+  flashDisk.file_close(filename);
   
   Serial.println("End");
 }
@@ -160,6 +177,10 @@ void show_picture_row(int column) {
   flashDisk.file_read(LED_COUNT * 3, led_data);
   
   // Display it on the LightScythe
+  Serial.print("Column: ");
+  Serial.print(led_data[0], HEX);
+  Serial.print(led_data[1], HEX);
+  Serial.println(led_data[2], HEX);
   // TODO
   
 }
