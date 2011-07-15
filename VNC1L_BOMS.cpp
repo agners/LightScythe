@@ -21,7 +21,7 @@
 
 #define DEFAULT_BAUD 9600
 
-VNC1L_BOMS::VNC1L_BOMS(int baud, byte pin_rx, byte pin_tx) {
+VNC1L_BOMS::VNC1L_BOMS(long baud, byte pin_rx, byte pin_tx) {
   _baud = baud;
   
   _vnc1l = NewSoftSerial(pin_rx, pin_tx);
