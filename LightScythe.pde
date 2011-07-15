@@ -16,7 +16,10 @@
 #include "LEDStripe.h"
 
 #define BAT_PIN 0
+// Max voltage (according to Wikipedia 3x4.2V => 12.6V)
 #define BAT_AD_MAX (1023 / 15.0 * 12.6)
+#define BAT_WARNING 9.0
+#define BAT_AD_MIN (1023 / 15.0 * BAT_WARNING)
 
 #define NEXT_PIN 7
 #define PREV_PIN 6
@@ -45,8 +48,9 @@ PushButton startButton = PushButton((uint8_t)START_PIN, 50, 3000, NULL, &start_p
 // LED stripe
 HL1606stripPWM strip = HL1606stripPWM(64, LATCH_PIN);
 
-// VDIP1 TX is our RX, and visa versa
-VNC1L_BOMS flashDisk = VNC1L_BOMS(9600, VDIP1_TX_PIN, VDIP1_RX_PIN);
+// VDIP1 TX is our RX, and visa versa, baudrate try 38400 or 57600
+VNC1L_BOMS flashDisk = VNC1L_BOMS(57600, VDIP1_TX_PIN, VDIP1_RX_PIN);
+
 char filename[6] = "n.BMP";
 long pic_offset; // Offset to the picture data inside the BMP file
 long pic_width; // Width of the picture (=> This is going to be the height on the RGB LED's)
@@ -79,8 +83,6 @@ void setup(){
   
   // Initialize the battery AD
   pinMode(BAT_PIN, INPUT);
-  Serial.println("Battery voltage: ");
-  Serial.println(check_battery() / 10.0, 1);
   
   delay(3000);
 //  Serial.println("Autostart...");
@@ -100,13 +102,16 @@ void loop(){
   }
 }
 
-int check_battery()
+void check_battery()
 {
   int bat = analogRead(BAT_PIN);
-  bat = map(bat, 1, BAT_AD_MAX, 0, 150);
-  if(bat < 90)
+  // Map AD value according to our voltage splitter (2K:1K => 10V:5V)
+  bat = map(bat, 1, 1023, 0, 150);
+  if(bat < BAT_WARNING * 10)
+  {
     Serial.println("Warning, battery Low!!");
-  return bat;
+    show_battery();
+  }
 }
 
 void next_pressed()
@@ -134,8 +139,17 @@ void show_picture_nbr() {
 }
 
 void start_longup() {
+  // Show battery state
+  show_battery();
+  
+  // Show 5 seconds
+  clear_stripe_time = millis() + 5000;
+}
+
+void show_battery() {
+  // Show battery state...
   int bat = analogRead(BAT_PIN);
-  bat = map(bat, 1, 1023, 0, LED_COUNT);
+  bat = map(bat, BAT_AD_MIN, BAT_AD_MAX, 0, LED_COUNT);
   // Show column
   for(int i = 0; i<=bat;i++) {
     if(i < 8) // First 8 LED's red...
@@ -146,9 +160,6 @@ void start_longup() {
       strip.setLEDcolorPWM(i, 0, 0xFF, 0);
   }
   strip.writeStripe();
-  
-  // Show 5 seconds
-  clear_stripe_time = millis() + 5000;
 }
 
 void start_pressed() {

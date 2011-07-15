@@ -19,14 +19,13 @@
 #include <NewSoftSerial.h>
 #include "VNC1L_BOMS.h"
 
+#define DEFAULT_BAUD 9600
+
 VNC1L_BOMS::VNC1L_BOMS(int baud, byte pin_rx, byte pin_tx) {
+  _baud = baud;
+  
   _vnc1l = NewSoftSerial(pin_rx, pin_tx);
-  
-  _vnc1l.begin(baud);
-  
-  
-//  _vnc1l.print("IPA");
-//  _vnc1l.print(13, BYTE);
+  _vnc1l.begin(DEFAULT_BAUD);
 }
 
 void VNC1L_BOMS::sync() {
@@ -43,15 +42,20 @@ void VNC1L_BOMS::sync() {
   
   // Switching baudrate
   _vnc1l.print("SBD $");
-  //_vnc1l.print(0x384100, HEX); // 9600
-  //_vnc1l.print(0x9C8000, HEX); // 19200
-  _vnc1l.print(0x4EC000, HEX); // 38400
-  //_vnc1l.print(0x34C000, HEX); // 57600
+  if(_baud == 9600)
+    _vnc1l.print(0x384100, HEX); // 9600
+  else if(_baud == 19200)
+    _vnc1l.print(0x9C8000, HEX); // 19200
+  else if(_baud == 38400)
+    _vnc1l.print(0x4EC000, HEX); // 38400
+  else if(_baud == 57600)
+    _vnc1l.print(0x34C000, HEX); // 57600
   _vnc1l.print(13, BYTE);
-  Serial.println("Switching baudrate to 57600");
+  Serial.print("Switching baudrate to ");
+  Serial.println(_baud);
   waitforprompt();
   delay(10);
-  _vnc1l.begin(38400);
+  _vnc1l.begin(_baud);
   delay(50);
   waitforprompt();
   Serial.println("Switching succeeded");
