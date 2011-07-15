@@ -22,12 +22,20 @@ class PushButton
   private:
     byte _pin;
     byte _state;
+    byte _longState;
     byte _lastState;
     long _lastDebounceTime;
     long _debounceDelay;
+    long _pressTime;
+    long _longPressDelay;
+    boolean _wasLongPress;
     void (*_pressed)(void);
+    void (*_released)(void);
+    void (*_longreleased)(void);
+    void init();
   public:
-    PushButton(uint8_t, long, void (*pressed)(void));
+    PushButton(byte pin, long debounceDelay, void (*pressed)(void));
+    PushButton(byte pin, long debounceDelay, long longPressDelay, void (*pressed)(void), void (*released)(void), void (*longreleased)(void));
     void setup();
     void check();
 };

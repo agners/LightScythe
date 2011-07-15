@@ -17,6 +17,24 @@ PushButton::PushButton(byte pin, long debounceDelay, void (*pressed)(void)) {
   _pin = pin;
   _debounceDelay = debounceDelay;
   _pressed = pressed;
+  
+  init();
+}
+
+PushButton::PushButton(byte pin, long debounceDelay, long longPressDelay, void (*pressed)(void), void (*released)(void), void (*longreleased)(void)) {
+  _pin = pin;
+  _debounceDelay = debounceDelay;
+  _longPressDelay = longPressDelay;
+  _pressed = pressed;
+  _released = released;
+  _longreleased = longreleased;
+  
+  init();
+}
+
+void PushButton::init() {
+  // Initial state is unpressed (1 == not pressed)
+  _state = _lastState = _longState = 1;
 }
 
 void PushButton::setup()
@@ -40,11 +58,22 @@ void PushButton::check() {
   if ((millis() - _lastDebounceTime) > _debounceDelay && _state != newState) {
     // The new state exceeded the debounce delay, take it as the actual statue
     _state = newState;
-    // 0 == active, generate a press event
-    if(_state == 0)
-      _pressed();
-  }
     
+    // 0 == active, generate a press event
+    if(_state == 0 && _pressed != NULL)
+      _pressed();
+      
+    if(_state == 1)
+    {
+      if((millis() - _pressTime) < _longPressDelay && _released != NULL)
+        _released();
+      else if (_longreleased != NULL)
+        _longreleased();
+    }
+    
+    _pressTime = millis();
+  }
+  
   // Save the state...
   _lastState = newState;
 }

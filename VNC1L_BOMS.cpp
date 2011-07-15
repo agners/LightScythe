@@ -30,6 +30,9 @@ VNC1L_BOMS::VNC1L_BOMS(int baud, byte pin_rx, byte pin_tx) {
 }
 
 void VNC1L_BOMS::sync() {
+  // If there are no data yet, the VNC1L probably did not rebooted... Send a newline to get a prompt!
+  if(!_vnc1l.available())
+    _vnc1l.print(13, BYTE);
   // Waiting for initial prompt, show output on console...
   waitforprompt(true);
   
@@ -42,12 +45,13 @@ void VNC1L_BOMS::sync() {
   _vnc1l.print("SBD $");
   //_vnc1l.print(0x384100, HEX); // 9600
   //_vnc1l.print(0x9C8000, HEX); // 19200
-  _vnc1l.print(0x34C000, HEX); // 57600
+  _vnc1l.print(0x4EC000, HEX); // 38400
+  //_vnc1l.print(0x34C000, HEX); // 57600
   _vnc1l.print(13, BYTE);
-  Serial.print("Switching baudrate to 57600");
+  Serial.println("Switching baudrate to 57600");
   waitforprompt();
   delay(10);
-  _vnc1l.begin(57600);
+  _vnc1l.begin(38400);
   delay(50);
   waitforprompt();
   Serial.println("Switching succeeded");
@@ -80,7 +84,7 @@ void VNC1L_BOMS::waitforprompt(boolean show)
 
 void VNC1L_BOMS::file_open(const String &file) {
   _vnc1l.print("OPR ");
-  _vnc1l.print("0.BMP");
+  _vnc1l.print(file);
   _vnc1l.print(13, BYTE);
   waitforprompt();
 }
