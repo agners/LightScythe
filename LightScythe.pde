@@ -1,3 +1,5 @@
+#include <multiCameraIrControl.h>
+
 /*
  LightScythe by falstaff
  
@@ -18,7 +20,7 @@
 #define BAT_PIN 0
 // Max voltage (according to Wikipedia 3x4.2V => 12.6V)
 #define BAT_AD_MAX (1023 / 15.0 * 12.6)
-#define BAT_WARNING 9.0
+#define BAT_WARNING 9.4
 #define BAT_AD_MIN (1023 / 15.0 * BAT_WARNING)
 
 #define NEXT_PIN 7
@@ -60,7 +62,11 @@ int pic_bit_count;
 static byte *pic_table;
 static byte *pic_data;
 
+// Nikon Shutter
+Nikon D90(SHUTTER_PIN);
+
 int picture_nbr = 0;
+
 unsigned long clear_stripe_time;
 
 void setup(){
@@ -153,13 +159,18 @@ void show_battery() {
   int bat = analogRead(BAT_PIN);
   bat = map(bat, BAT_AD_MIN, BAT_AD_MAX, 0, LED_COUNT);
   // Show column
-  for(int i = 0; i<=bat;i++) {
-    if(i < 8) // First 8 LED's red...
-      strip.setLEDcolorPWM(i, 0xFF, 0, 0);
-    else if(i < 24) // Next 16 LED's yellow...
-      strip.setLEDcolorPWM(i, 0xFF, 0xFF, 0);
-    else // The rest is green
-      strip.setLEDcolorPWM(i, 0, 0xFF, 0);
+  for(int i = 0; i<LED_COUNT;i++) {
+    if(i<bat)
+    {
+      if(i < 8) // First 8 LED's red...
+        strip.setLEDcolorPWM(LED_COUNT-i, 0xFF, 0, 0);
+      else if(i < 24) // Next 16 LED's yellow...
+        strip.setLEDcolorPWM(LED_COUNT-i, 0xFF, 0xFF, 0);
+      else // The rest is green
+        strip.setLEDcolorPWM(LED_COUNT-i, 0, 0xFF, 0);
+    }
+    else
+        strip.setLEDcolorPWM(i-LED_COUNT, 0, 0, 0);
   }
   strip.writeStripe();
 }
@@ -168,7 +179,14 @@ void start_pressed() {
   // Set picture number for file open string...
   filename[0] = '0' + picture_nbr;
   
-  Serial.print("Start: ");
+  
+  Serial.print("Fire shutter...");
+  D90.shutterNow();
+  delay(1);
+  D90.shutterNow();
+  delay(500);
+  
+  Serial.print("Open file: ");
   Serial.println(filename);
   
   // Open the file
