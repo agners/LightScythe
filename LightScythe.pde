@@ -39,7 +39,7 @@
 
 #define DEBUG_PIN 13
 
-#define MAX_PICTURE 9
+#define MAX_PICTURE 64
 
 #define _DEBUG 0
 
@@ -53,7 +53,8 @@ HL1606stripPWM strip = HL1606stripPWM(64, LATCH_PIN);
 // VDIP1 TX is our RX, and visa versa, baudrate try 38400 or 57600
 VNC1L_BOMS flashDisk = VNC1L_BOMS(57600, VDIP1_TX_PIN, VDIP1_RX_PIN);
 
-char filename[6] = "n.BMP";
+char filename[7] = "nn.BMP";
+char filenbr[3] = "00";
 long pic_offset; // Offset to the picture data inside the BMP file
 long pic_width; // Width of the picture (=> This is going to be the height on the RGB LED's)
 long pic_row_width; // Raw Width
@@ -186,9 +187,7 @@ void start_pressed() {
   D90.shutterNow();
   delay(500);
   
-  
-  // Set picture number for file open string...
-  filename[0] = '0' + picture_nbr;
+  generate_filename();
   
   // Open the file
   Serial.print("Open file: ");
@@ -245,6 +244,7 @@ void start_pressed() {
   Serial.println(pic_table_entries);
   
   // Seek to color table (we ignore color masks, should not be there!)
+  Serial.println("Loading color palette...");
   pic_table = (byte*)malloc(pic_table_entries*3);
   // This is going to be a seek/read party, because we don't want the unused bytes laying around... (B.G.R.X)
   // Saves us up to 256 bytes!
@@ -269,7 +269,6 @@ void start_pressed() {
   pic_data = (byte*)malloc(rowsize);
   
   // Go to start of picture
-  Serial.println("Seeking to picture data...");
   flashDisk.file_seek(pic_offset);
   
   // Column's are the BMP's rows...
@@ -279,10 +278,14 @@ void start_pressed() {
   
   // Read first column...
   Serial.println("Starting to display the picture...");
-  flashDisk.file_read(rowsize, pic_data);
-  for(column = 1; column < pic_height; column++)
+  for(column = 0; column < pic_height; column++)
   {
-    // Show column
+    showmillis = millis();
+    // Read the column (=> column is a row in picture file)
+    // 57600 takes about 10-20ms
+    flashDisk.file_read(rowsize, pic_data);
+    
+    // Set next colors of the stripe...
     if(pic_bit_count == 4)
     {
       // We need to write two LED's at once
@@ -308,24 +311,16 @@ void start_pressed() {
       }
       
     }
+    
+    // We show nothing for exact 30ms
+    while((millis() - showmillis) < 30);
+    
     strip.writeStripe();
-    showmillis = millis();
     
     // We show the led for at least 30ms
-    while((millis() - showmillis) < 30);
+    while((millis() - showmillis) < 60);
     
     clear_stripe();
-    
-    showmillis = millis();
-    
-    // While dark, read the next column...
-    unsigned long  t = millis();
-    flashDisk.file_read(rowsize, pic_data);
-    
-    
-    // We show nothing for another 30ms
-    while((millis() - showmillis) < 30);
-    //Serial.println(millis() - t);
     
     if(startButton.pressed())
     {
@@ -339,9 +334,8 @@ void start_pressed() {
   free(pic_table);
   free(pic_data);
   
-  Serial.println("End");
+  Serial.println("Reached end of the picture...");
 }
-
 
 
 void clear_stripe() {
@@ -356,3 +350,21 @@ void error_stripe() {
   strip.writeStripe();
 }
 
+
+inline void generate_filename()
+{
+  // Set picture number for file open string...
+  itoa(picture_nbr, filenbr, 10);
+  if(filenbr[1] == '\0')
+  {
+    // One digit...
+    filename[0] = '0';
+    filename[1] = filenbr[0];
+  }
+  else
+  {
+    // Two digits...
+    filename[0] = filenbr[0];
+    filename[1] = filenbr[1];
+  }
+}
