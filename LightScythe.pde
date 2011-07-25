@@ -11,8 +11,6 @@
  http://falstaff.agner.ch/lightscythe/
 
 */
-
-#include <NewSoftSerial.h>
 #include "PushButton.h"
 #include "VNC1L_BOMS.h"
 #include "LEDStripe.h"
@@ -43,6 +41,8 @@
 
 #define MAX_PICTURE 9
 
+#define _DEBUG 0
+
 PushButton nextButton = PushButton((uint8_t)NEXT_PIN, 50, &next_pressed);
 PushButton prevButton = PushButton((uint8_t)PREV_PIN, 50, &prev_pressed);
 PushButton startButton = PushButton((uint8_t)START_PIN, 50, 3000, NULL, &start_pressed, &start_longup);
@@ -51,7 +51,7 @@ PushButton startButton = PushButton((uint8_t)START_PIN, 50, 3000, NULL, &start_p
 HL1606stripPWM strip = HL1606stripPWM(64, LATCH_PIN);
 
 // VDIP1 TX is our RX, and visa versa, baudrate try 38400 or 57600
-VNC1L_BOMS flashDisk = VNC1L_BOMS(38400, VDIP1_TX_PIN, VDIP1_RX_PIN);
+VNC1L_BOMS flashDisk = VNC1L_BOMS(57600, VDIP1_TX_PIN, VDIP1_RX_PIN);
 
 char filename[6] = "n.BMP";
 long pic_offset; // Offset to the picture data inside the BMP file
@@ -176,47 +176,55 @@ void show_battery() {
 }
 
 void start_pressed() {
-  // Set picture number for file open string...
-  filename[0] = '0' + picture_nbr;
+  // Clear the stripe...
+  clear_stripe();
   
-  
-  Serial.print("Fire shutter...");
+  // Fire our shutter, twice!
+  Serial.println("Fire shutter...");
   D90.shutterNow();
-  delay(1);
+  delay(50);
   D90.shutterNow();
   delay(500);
   
-  Serial.print("Open file: ");
-  Serial.println(filename);
+  
+  // Set picture number for file open string...
+  filename[0] = '0' + picture_nbr;
   
   // Open the file
+  Serial.print("Open file: ");
+  Serial.println(filename);
   flashDisk.file_open(filename);
   
-  // We do support 24-bit BMP
-  // Get the offset for the picture data
+  // Get the offset to the picture data
   flashDisk.file_seek(0xA);
   flashDisk.file_read(4, (byte*)&pic_offset);
-  // Get file width
+  // Get picture width
   flashDisk.file_seek(0x12);
   flashDisk.file_read(4, (byte*)&pic_width);
-  // Get file height
+  // Get picture height
   flashDisk.file_seek(0x16);
   flashDisk.file_read(4, (byte*)&pic_height);
   // Bit depth hast to be 8!
   flashDisk.file_seek(0x1C);
   flashDisk.file_read(2, (byte*)&pic_bit_count);
+  
+  // We only support 8-Bit and 4-Bit indexed BMP files
   if(pic_bit_count != 8 && pic_bit_count != 4)
   {
+    error_stripe();
     Serial.print("Bit count is ");
     Serial.print(pic_bit_count);
     Serial.println("! Make sure you saved the file as a 4/8-Bit Bitmap.");
+    delay(500);
+    clear_stripe();
+    flashDisk.file_close(filename);
     return;
   }
+  
   // Get count of colors in picture table
   long pic_table_entries;
   flashDisk.file_seek(0x2E);
   flashDisk.file_read(4, (byte*)&pic_table_entries);
-  
   
   // Calculate a BMP row width in bytes. This is allways a multiple of 4
   pic_row_width = (pic_width * 3);
@@ -244,128 +252,107 @@ void start_pressed() {
   {
     flashDisk.file_seek(0x36 + offset*4);
     flashDisk.file_read(3, pic_table + offset*3);
-    Serial.print("E");
+#if _DEBUG
+    Serial.print("Color ");
     Serial.print(offset);
-    Serial.print(" ");
+    Serial.print(":");
     Serial.print(*(pic_table + offset*3), HEX);
     Serial.print(*(pic_table + offset*3+1), HEX);
     Serial.println(*(pic_table + offset*3+2), HEX);
+#endif
   }
   
-  // Calculate row size and allocate memory...
+  // Calculate row size and allocate memory for the data...
   int rowsize = (pic_bit_count * pic_width / 32) * 4;
   Serial.print("Calculated rowsize: ");
   Serial.println(rowsize);
   pic_data = (byte*)malloc(rowsize);
   
   // Go to start of picture
+  Serial.println("Seeking to picture data...");
   flashDisk.file_seek(pic_offset);
   
   // Column's are the BMP's rows...
   int column = 0;
   int index;
-  int showmillis;
+  unsigned long showmillis;
   
   // Read first column...
-  show_picture_row(rowsize);
+  Serial.println("Starting to display the picture...");
+  flashDisk.file_read(rowsize, pic_data);
   for(column = 1; column < pic_height; column++)
   {
     // Show column
     if(pic_bit_count == 4)
     {
+      // We need to write two LED's at once
       for(int i = 0; i<LED_COUNT/2;i++)
       {
+        // Get the upper 4-Bit index to the color palette
         index = *(pic_data + i) >> 4;
-        /*
-        Serial.print("i");
-        Serial.print(index);
-        Serial.print("b");
-        Serial.print(pic_table[index * 3 + 0]);
-        Serial.print("g");
-        Serial.print(pic_table[index * 3 + 1]);
-        Serial.print("r");
-        Serial.println(pic_table[index * 3 + 2]);
-        */
         strip.setLEDcolorPWM(i*2, pic_table[index * 3 + 2], pic_table[index * 3 + 1], pic_table[index * 3 + 0]);
+        // Get the lower 4-Bit index to the color palette
         index = *(pic_data + i) & 0x0F;
-        /*
-        Serial.print("b");
-        Serial.print(pic_table[index * 3 + 0]);
-        Serial.print("g");
-        Serial.print(pic_table[index * 3 + 1]);
-        Serial.print("r");
-        Serial.println(pic_table[index * 3 + 2]);
-        */
         strip.setLEDcolorPWM(i*2+1, pic_table[index * 3 + 2], pic_table[index * 3 + 1], pic_table[index * 3 + 0]);
       }
     }
     else if(pic_bit_count == 8)
     {
+      // Write LED by LED
+      for(int i = 0; i<LED_COUNT;i++)
+      {
+        // Get 8-Bit index to the color palette
+        index = *(pic_data + i);
+        // Using the color index
+        strip.setLEDcolorPWM(i, pic_table[index * 3 + 2], pic_table[index * 3 + 1], pic_table[index * 3 + 0]);
+      }
       
     }
     strip.writeStripe();
     showmillis = millis();
     
-    // Read next column...
-    show_picture_row(rowsize);
-    
-    // We show the led for at least 20ms
-    while((millis() - showmillis) < 50);
+    // We show the led for at least 30ms
+    while((millis() - showmillis) < 30);
     
     clear_stripe();
     
-    // We show display nothing for another 20ms
-    while((millis() - showmillis) < 50);
+    showmillis = millis();
     
-    /*
-    delay(20);
-    */
+    // While dark, read the next column...
+    unsigned long  t = millis();
+    flashDisk.file_read(rowsize, pic_data);
+    
+    
+    // We show nothing for another 30ms
+    while((millis() - showmillis) < 30);
+    //Serial.println(millis() - t);
+    
+    if(startButton.pressed())
+    {
+      // Wait for release... 
+      while(!startButton.pressed());
+      break;
+    }
   }
   
   flashDisk.file_close(filename);
+  free(pic_table);
+  free(pic_data);
   
   Serial.println("End");
 }
+
+
+
 void clear_stripe() {
   for(int i = 0; i<LED_COUNT;i++)
     strip.setLEDcolorPWM(i, 0, 0, 0);
   strip.writeStripe();
 }
 
-void show_picture_row(int count) {
-  long row_offset = pic_offset;
-  
-  // If height is negativ, its a buttom up picture, get last row first...
-  /*
-  if(pic_height > 0)
-  {
-    // Buttom up picture
-    row_offset += pic_row_width * (pic_height - 1); // => Start of last row
-    row_offset -= pic_row_width * column;
-  }
-  else
-  {
-    // Top down picture
-    row_offset += pic_row_width * column;
-  }
-  
-  // Seek to the start of the line
-  flashDisk.file_seek(row_offset);
-  */
-  // Read the line
-  unsigned long  t = millis();
-  flashDisk.file_read(count, pic_data);
-    Serial.println(millis() - t);
-  
-  
-  // Display it on the LightScythe
-  /*
-  Serial.print("Column: ");
-  Serial.print(led_data[0], HEX);
-  Serial.print(led_data[1], HEX);
-  Serial.println(led_data[2], HEX);
-  */
-  // TODO
-  
+void error_stripe() {
+  for(int i = 0; i<LED_COUNT;i++)
+    strip.setLEDcolorPWM(i, 255, 0, 0);
+  strip.writeStripe();
 }
 

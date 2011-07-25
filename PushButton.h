@@ -36,6 +36,7 @@ class PushButton
   public:
     PushButton(byte pin, long debounceDelay, void (*pressed)(void));
     PushButton(byte pin, long debounceDelay, long longPressDelay, void (*pressed)(void), void (*released)(void), void (*longreleased)(void));
+    byte pressed();
     void setup();
     void check();
 };

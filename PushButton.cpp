@@ -44,6 +44,10 @@ void PushButton::setup()
   digitalWrite(_pin, HIGH);
 }
 
+byte PushButton::pressed() {
+  return !digitalRead(_pin);
+}
+
 void PushButton::check() {
   uint8_t newState;
   
