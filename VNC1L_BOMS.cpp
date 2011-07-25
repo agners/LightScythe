@@ -16,15 +16,13 @@
 */
 
 #include <WProgram.h>
-#include <NewSoftSerial.h>
 #include "VNC1L_BOMS.h"
 
 #define DEFAULT_BAUD 9600
 
-VNC1L_BOMS::VNC1L_BOMS(long baud, byte pin_rx, byte pin_tx) {
+VNC1L_BOMS::VNC1L_BOMS(long baud, byte pin_rx, byte pin_tx)
+  : _vnc1l(pin_rx, pin_tx) {
   _baud = baud;
-  
-  _vnc1l = NewSoftSerial(pin_rx, pin_tx);
   _vnc1l.begin(DEFAULT_BAUD);
 }
 
@@ -121,6 +119,7 @@ void VNC1L_BOMS::file_close(const String &file) {
   _vnc1l.print("CLF ");
   _vnc1l.print(file);
   _vnc1l.print(13, BYTE);
+  waitforprompt();
 }
 
 

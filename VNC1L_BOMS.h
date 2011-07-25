@@ -19,12 +19,12 @@
 #define VNC1L_BOMS_h
 
 #include "WProgram.h"
-#include <NewSoftSerial.h>
+#include "SoftwareSerial.h"
 
 class VNC1L_BOMS
 {
   private:
-    NewSoftSerial _vnc1l;
+    SoftwareSerial _vnc1l;
     byte _pin_rx;
     byte _pin_tx;
     long _baud;
