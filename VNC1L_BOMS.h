@@ -28,15 +28,15 @@ class VNC1L_BOMS
     byte _pin_rx;
     byte _pin_tx;
     long _baud;
+    boolean waitforprompt(boolean show=false);
     
   public:
     VNC1L_BOMS(long baud, byte pin_rx, byte pin_tx);
-    void file_open(const String &file);
-    void file_seek(long offset);
+    boolean file_open(const String &file);
+    boolean file_seek(long offset);
     void file_read(int count, byte[]);
     void file_close(const String &file);
     void sync();
-    void waitforprompt(boolean show=false);
 };
 
 #endif

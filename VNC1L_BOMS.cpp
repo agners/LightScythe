@@ -29,13 +29,13 @@ VNC1L_BOMS::VNC1L_BOMS(long baud, byte pin_rx, byte pin_tx)
 void VNC1L_BOMS::sync() {
   // If there are no data yet, the VNC1L probably did not rebooted... Send a newline to get a prompt!
   if(!_vnc1l.available())
-    _vnc1l.print(13, BYTE);
+    _vnc1l.print(0x0D, BYTE);
   // Waiting for initial prompt, show output on console...
   waitforprompt(true);
   
   // Switch to ASCII mode
   _vnc1l.print("IPA");
-  _vnc1l.print(13, BYTE);
+  _vnc1l.print(0x0D, BYTE);
   waitforprompt();
   
   // Switching baudrate
@@ -48,7 +48,7 @@ void VNC1L_BOMS::sync() {
     _vnc1l.print(0x4EC000, HEX); // 38400
   else if(_baud == 57600)
     _vnc1l.print(0x34C000, HEX); // 57600
-  _vnc1l.print(13, BYTE);
+  _vnc1l.print(0x0D, BYTE);
   Serial.print("Switching baudrate to ");
   Serial.println(_baud);
   waitforprompt();
@@ -59,7 +59,10 @@ void VNC1L_BOMS::sync() {
   Serial.println("Switching succeeded");
 }
 
-void VNC1L_BOMS::waitforprompt(boolean show)
+static char cf[] = "Command Failed";
+static char bc[] = "Bad Command";
+
+boolean VNC1L_BOMS::waitforprompt(boolean show)
 {
   char msg[30];
   int i = 0;
@@ -75,7 +78,17 @@ void VNC1L_BOMS::waitforprompt(boolean show)
         if(show)
           Serial.println(msg);
         if(msg[i-1] == '>')
-          break;
+          return true;
+        else if(!strcmp(msg, cf))
+        {
+          Serial.println("Command Failed");
+          return false;
+        }
+        else if(!strcmp(msg, bc))
+        {
+          Serial.println("Bad Command");
+          return false;
+        }
         i = 0;
       }
       else
@@ -84,25 +97,25 @@ void VNC1L_BOMS::waitforprompt(boolean show)
   }
 }
 
-void VNC1L_BOMS::file_open(const String &file) {
+boolean VNC1L_BOMS::file_open(const String &file) {
   _vnc1l.print("OPR ");
   _vnc1l.print(file);
-  _vnc1l.print(13, BYTE);
-  waitforprompt();
+  _vnc1l.print(0x0D, BYTE);
+  return waitforprompt();
 }
 
-void VNC1L_BOMS::file_seek(long offset) {
+boolean VNC1L_BOMS::file_seek(long offset) {
   _vnc1l.print("SEK $");
   _vnc1l.print(offset, HEX);
-  _vnc1l.print(13, BYTE);
-  waitforprompt();
+  _vnc1l.print(0x0D, BYTE);
+  return waitforprompt();
 }
 
 void VNC1L_BOMS::file_read(int count, byte buffer[]) {
   int done = 0;
   _vnc1l.print("RDF $");
   _vnc1l.print(count, HEX);
-  _vnc1l.print(13, BYTE);
+  _vnc1l.print(0x0D, BYTE);
   
   while(done < count)
   {
@@ -118,7 +131,7 @@ void VNC1L_BOMS::file_read(int count, byte buffer[]) {
 void VNC1L_BOMS::file_close(const String &file) {
   _vnc1l.print("CLF ");
   _vnc1l.print(file);
-  _vnc1l.print(13, BYTE);
+  _vnc1l.print(0x0D, BYTE);
   waitforprompt();
 }
 

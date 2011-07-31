@@ -1,5 +1,3 @@
-#include <multiCameraIrControl.h>
-
 /*
  LightScythe by falstaff
  
@@ -11,6 +9,7 @@
  http://falstaff.agner.ch/lightscythe/
 
 */
+#include <multiCameraIrControl.h>
 #include "PushButton.h"
 #include "VNC1L_BOMS.h"
 #include "LEDStripe.h"
@@ -192,7 +191,14 @@ void start_pressed() {
   // Open the file
   Serial.print("Open file: ");
   Serial.println(filename);
-  flashDisk.file_open(filename);
+  if(!flashDisk.file_open(filename))
+  {
+    error_stripe();
+    Serial.println("File open failed!");
+    delay(500);
+    clear_stripe();
+    return;
+  }
   
   // Get the offset to the picture data
   flashDisk.file_seek(0xA);
@@ -276,7 +282,7 @@ void start_pressed() {
   int index;
   unsigned long showmillis;
   
-  // Read first column...
+  // Start showing the picture...
   Serial.println("Starting to display the picture...");
   for(column = 0; column < pic_height; column++)
   {
@@ -312,12 +318,12 @@ void start_pressed() {
       
     }
     
-    // We show nothing for exact 30ms
-    while((millis() - showmillis) < 30);
+    // We show nothing for exact 45ms
+    while((millis() - showmillis) < 45);
     
     strip.writeStripe();
     
-    // We show the led for at least 30ms
+    // We show the led for at least 15ms
     while((millis() - showmillis) < 60);
     
     clear_stripe();
